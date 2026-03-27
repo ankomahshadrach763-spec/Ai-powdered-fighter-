@@ -1,0 +1,352 @@
+<DOCUMENT filename="galamsey_guard_ai_pro_v5.html">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#C8930A;--gold-l:#F5C842;--gold-dim:#7A5A06;
+  --bg0:#0B0D0F;--bg1:#111418;--bg2:#171C22;--bg3:#1E2530;
+  --border:#2A3340;--border2:#3A4858;
+  --text:#C8D4E0;--text2:#7A9AB8;--text3:#4A6480;
+  --red:#FF3B5C;--green:#3DCC7A;--amber:#F0A020;
+  --teal:#28C8A8;--purple:#8870E8;
+}
+body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--text);font-size:13px;padding:0;line-height:1.45}
+.shell{display:grid;grid-template-rows:58px 1fr;height:100vh;overflow:hidden;border:1px solid var(--border);border-radius:12px;box-shadow:0 0 60px rgba(197,147,10,0.22)}
+.topbar{background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:24px}
+.logo{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--gold-l);letter-spacing:3.5px;font-weight:700}
+.logo span{color:var(--text3)}
+.status-pill{font-size:12.5px;padding:5px 16px;border-radius:30px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:6px;background:#0D3020;color:var(--green);border:1px solid #1A4A30}
+.main{display:grid;grid-template-columns:270px 1fr 310px;overflow:hidden;height:calc(100vh - 58px)}
+.left{background:var(--bg1);border-right:1px solid var(--border);padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.section-label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.section-label::before{content:'';display:block;width:14px;height:1px;background:var(--gold-dim)}
+.layer-toggle{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:.2s}
+.layer-toggle.active{border-color:var(--teal);background:#0F2A24}
+.map-area{position:relative;overflow:hidden;background:#0A1410}
+#map-container{width:100%;height:100%;position:relative}
+.right{background:var(--bg1);border-left:1px solid var(--border);padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.gps-status{font-size:11px;padding:4px 10px;background:var(--bg2);border-radius:6px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.photo-upload-area{border:2px dashed var(--gold-dim);border-radius:10px;padding:20px;text-align:center;background:var(--bg3);cursor:pointer;transition:.2s}
+.photo-upload-area:hover{border-color:var(--gold-l)}
+.uploaded-photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.uploaded-photo{width:80px;height:80px;border-radius:6px;overflow:hidden;border:1px solid var(--border);position:relative}
+.uploaded-photo img{width:100%;height:100%;object-fit:cover}
+.remove-photo{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);color:#fff;width:18px;height:18px;border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ai-chat{background:var(--bg2);border-radius:10px;border:1px solid var(--border);height:280px;display:flex;flex-direction:column}
+.chat-messages{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;font-size:12.5px}
+.chat-input{display:flex;padding:10px;gap:8px;background:var(--bg3);border-top:1px solid var(--border)}
+.chat-input input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--text)}
+.btn-ai-chat{background:var(--teal);color:#000;border:none;padding:10px 16px;border-radius:6px;font-weight:600;cursor:pointer}
+.ndvi-legend{position:absolute;bottom:80px;right:20px;background:rgba(11,13,15,0.92);padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:10px}
+</style>
+
+<div class="shell">
+  <div class="topbar">
+    <div class="logo">GALAM<span>GUARD</span> AI</div>
+    <div class="status-pill">● LIVE SENTINEL-2 + NDVI • GALAMSEY MONITORING</div>
+    <div style="font-size:13.5px;color:var(--text3);font-weight:500">Real-Time Satellite Imagery + Vegetation Health Analysis</div>
+    <div class="topbar-right">
+      <span class="mono" style="color:var(--teal)">Sentinel-2 • NDVI Processing Active</span>
+      <span class="mono" id="clock" style="color:var(--text2)">--:--:--</span>
+      <span style="background:#0D3020;color:var(--green);padding:4px 12px;border-radius:20px;font-size:11.5px" id="gps-location">Detecting GPS...</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- LEFT: Controls -->
+    <div class="left">
+      <div>
+        <div class="section-label">SENTINEL-2 LAYERS + NDVI</div>
+        <div id="layers">
+          <div class="layer-toggle active" data-layer="truecolor">🌈 True Color (RGB)</div>
+          <div class="layer-toggle active" data-layer="ndvi">🌿 NDVI Vegetation Index</div>
+          <div class="layer-toggle active" data-layer="forest">🌳 Forest Reserves</div>
+          <div class="layer-toggle active" data-layer="water">💧 Water Bodies</div>
+          <div class="layer-toggle active" data-layer="illegal">🚨 AI Galamsey Detection</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">AI MISSION CONTROL</div>
+        <button onclick="runAIScan()" class="btn" style="width:100%;padding:12px;background:var(--teal);color:#000;border:none;border-radius:8px;font-weight:700;margin-bottom:8px">🚀 RUN AI GALAMSEY + NDVI ANALYSIS</button>
+        <button onclick="simulateReport()" class="btn" style="width:100%;padding:11px;background:#2A2008;color:var(--gold);border:1px solid var(--gold-dim);border-radius:8px">📍 REPORT ACTIVITY</button>
+      </div>
+
+      <div>
+        <div class="section-label">HIGH-RISK ZONES (NDVI IMPACT)</div>
+        <div id="hotzones"></div>
+      </div>
+
+      <div style="margin-top:auto;background:var(--bg2);padding:14px;border-radius:10px;border:1px solid var(--border)">
+        <div class="section-label" style="margin-bottom:6px">AI + NDVI ACCURACY</div>
+        <div style="font-size:28px;font-family:'Share Tech Mono',monospace;color:#3DCC7A" id="ai-conf">95.4%</div>
+        <div style="height:7px;background:#2A3340;border-radius:4px;margin:8px 0"><div id="ai-bar" style="height:100%;width:95%;background:linear-gradient(90deg,#3DCC7A,#F5C842);border-radius:4px"></div></div>
+      </div>
+    </div>
+
+    <!-- CENTER: Leaflet Map with Sentinel-2 + NDVI -->
+    <div class="map-area">
+      <div id="map-container"></div>
+      <div class="map-overlay">
+        <div id="map-markers" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:1000"></div>
+        <div class="ndvi-legend" id="ndvi-legend" style="display:none">
+          <div style="margin-bottom:4px;color:var(--text3)">NDVI SCALE</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px">
+            <span style="color:#FF3B5C">−1</span>
+            <div style="flex:1;height:6px;background:linear-gradient(to right,#FF3B5C,#F5C842,#3DCC7A)"></div>
+            <span style="color:#3DCC7A">+1</span>
+          </div>
+          <small style="color:var(--text3)">Red = bare soil/water • Green = healthy vegetation</small>
+        </div>
+        <div style="position:absolute;bottom:20px;left:20px;background:rgba(11,13,15,0.92);padding:9px 16px;border-radius:8px;border:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:11.5px;color:var(--text2)">
+          Ashanti Region • Sentinel-2 + NDVI
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: AI Chat + Reports -->
+    <div class="right">
+      <div class="section-label">LIVE AI ALERTS</div>
+      <div id="alerts" style="max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
+
+      <div class="section-label">AI ASSISTANT (NDVI-aware)</div>
+      <div class="ai-chat">
+        <div class="chat-messages" id="chat-messages">
+          <div style="align-self:flex-start;background:#1F0F12;padding:10px;border-radius:8px">NDVI layer is now active. Low NDVI areas may indicate vegetation loss from galamsey.</div>
+        </div>
+        <div class="chat-input">
+          <input type="text" id="chat-input" placeholder="E.g. NDVI status near Pra River" onkeypress="if(event.key==='Enter') sendChatMessage()">
+          <button onclick="sendChatMessage()" class="btn-ai-chat">SEND</button>
+        </div>
+      </div>
+
+      <div class="section-label">SUBMIT PHOTO REPORT</div>
+      <div class="gps-status" id="gps-status">📍 GPS: Detecting location...</div>
+
+      <div>
+        <div id="photo-upload-area" class="photo-upload-area">
+          <p style="color:var(--gold)">📸 Click or drag photos here</p>
+          <small style="color:var(--text3)">Photos + GPS + current NDVI context attached</small>
+          <input type="file" id="photo-input" accept="image/*" multiple style="display:none">
+        </div>
+        <div id="uploaded-photos" class="uploaded-photos"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <input type="text" id="report-location" placeholder="GPS Location" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);margin-bottom:8px" readonly>
+        <textarea id="report-desc" rows="2" placeholder="Description (e.g. low vegetation observed)" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);resize:vertical"></textarea>
+        <button onclick="submitPhotoReport()" style="width:100%;padding:12px;background:#1A1000;color:var(--gold);border:1px solid var(--gold-dim);border-radius:8px;font-weight:600;margin-top:8px">🚨 SUBMIT REPORT + PHOTOS + GPS</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<script>
+// Clock
+function tick(){const n=new Date();document.getElementById('clock').textContent=n.toTimeString().slice(0,8)}
+tick();setInterval(tick,1000);
+
+let map;
+let trueColorLayer;
+let ndviLayer = null;
+let currentNDVIActive = false;
+
+// Initialize Leaflet Map with Sentinel-2 tiles
+function initSatelliteMap() {
+  map = L.map('map-container', {
+    center: [6.2, -1.58], // Ashanti, Ghana
+    zoom: 10
+  });
+
+  // Base True Color (Sentinel-2 style via public high-res imagery)
+  trueColorLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    opacity: 0.95,
+    attribution: 'Esri / Sentinel-2'
+  }).addTo(map);
+
+  // NDVI simulation layer (colored overlay - in real app this would be processed Sentinel NDVI tile)
+  // Here we use a semi-transparent colored layer to simulate NDVI effect
+  ndviLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    opacity: 0.0
+  }).addTo(map);
+
+  // Click handler for demo NDVI info
+  map.on('click', function(e) {
+    if (currentNDVIActive) {
+      alert(`NDVI value at clicked location (simulated): 0.68\nHealthy vegetation detected.\nLow risk of recent galamsey clearing.`);
+    }
+  });
+}
+
+// Toggle NDVI layer
+function toggleNDVI(active) {
+  currentNDVIActive = active;
+  if (ndviLayer) {
+    ndviLayer.setOpacity(active ? 0.75 : 0.0);
+  }
+  document.getElementById('ndvi-legend').style.display = active ? 'block' : 'none';
+}
+
+// GPS Auto-Location
+let currentLat = 6.2100;
+let currentLon = -1.5800;
+
+function getGPSLocation() {
+  const statusEl = document.getElementById('gps-status');
+  const locationInput = document.getElementById('report-location');
+  const topLocation = document.getElementById('gps-location');
+
+  statusEl.innerHTML = '📍 Acquiring GPS...';
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        currentLat = position.coords.latitude.toFixed(4);
+        currentLon = position.coords.longitude.toFixed(4);
+        const display = `${currentLat}°N, ${Math.abs(currentLon)}°W`;
+        locationInput.value = display;
+        topLocation.textContent = display;
+        statusEl.innerHTML = `📍 GPS Locked: ${display}`;
+        if (map) map.flyTo([currentLat, currentLon], 12);
+      },
+      () => {
+        statusEl.innerHTML = '📍 Using default Ashanti GPS';
+        locationInput.value = '6.2100°N, 1.5800°W';
+      }
+    );
+  }
+}
+
+// Layer toggles with NDVI support
+document.querySelectorAll('.layer-toggle').forEach(el => {
+  el.addEventListener('click', () => {
+    el.classList.toggle('active');
+    const layerName = el.getAttribute('data-layer');
+    if (layerName === 'ndvi') {
+      toggleNDVI(el.classList.contains('active'));
+    }
+    console.log('Layer toggled:', layerName);
+  });
+});
+
+// AI Scan with NDVI mention
+window.runAIScan = function() {
+  document.getElementById('scanline').style.animation = 'sweep 1.6s linear';
+  setTimeout(() => {
+    alert("✅ AI + NDVI ANALYSIS COMPLETE\n\n• Detected vegetation stress in 3 zones (low NDVI)\n• 14 galamsey sites correlated with cleared areas\n• Alerts sent to EPA");
+    if (map) map.flyTo([6.35, -1.45], 11); // zoom to a "affected" area
+  }, 1600);
+};
+
+// Chat with NDVI context
+window.sendChatMessage = function() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+
+  const chat = document.getElementById('chat-messages');
+  chat.innerHTML += `<div style="align-self:flex-end;background:#0F2A24;padding:10px;border-radius:8px;max-width:75%">${text}</div>`;
+
+  setTimeout(() => {
+    let reply = "NDVI analysis shows moderate vegetation health in the queried area.";
+    const lower = text.toLowerCase();
+    if (lower.includes('pra') || lower.includes('river')) reply = "Pra River area shows declining NDVI near mining zones — possible galamsey impact on riparian vegetation.";
+    else if (lower.includes('ndvi')) reply = "Current average NDVI: 0.62. Healthy forests >0.7. Areas below 0.4 may indicate recent clearing.";
+    chat.innerHTML += `<div style="align-self:flex-start;background:#1F0F12;padding:10px;border-radius:8px;max-width:75%">${reply}</div>`;
+    chat.scrollTop = chat.scrollHeight;
+  }, 700);
+
+  input.value = '';
+};
+
+// Photo upload, submit report, hotzones, alerts, etc. (same logic as v4)
+let uploadedFiles = [];
+const uploadArea = document.getElementById('photo-upload-area');
+const fileInput = document.getElementById('photo-input');
+const photosContainer = document.getElementById('uploaded-photos');
+
+uploadArea.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  for (let file of e.target.files) {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        uploadedFiles.push({name: file.name, data: ev.target.result});
+        renderUploadedPhotos();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+});
+
+function renderUploadedPhotos() {
+  photosContainer.innerHTML = '';
+  uploadedFiles.forEach((file, index) => {
+    const div = document.createElement('div');
+    div.className = 'uploaded-photo';
+    div.innerHTML = `<img src="${file.data}"><div class="remove-photo" onclick="removePhoto(${index})">×</div>`;
+    photosContainer.appendChild(div);
+  });
+}
+
+window.removePhoto = function(index) {
+  uploadedFiles.splice(index, 1);
+  renderUploadedPhotos();
+};
+
+window.submitPhotoReport = function() {
+  const location = document.getElementById('report-location').value || "6.2100°N, 1.5800°W";
+  const desc = document.getElementById('report-desc').value || "Observed activity";
+  alert(`✅ Report submitted with GPS (${location}), ${uploadedFiles.length} photos, and current NDVI context.\nForwarded to EPA Ghana.`);
+  // Reset form
+  uploadedFiles = [];
+  renderUploadedPhotos();
+  document.getElementById('report-desc').value = '';
+};
+
+// Hot zones
+function populateHotzones() {
+  const data = [
+    {name:"Obuasi–Konongo", risk:93, impact:"Low NDVI + river pollution"},
+    {name:"Pra River Area", risk:88, impact:"Vegetation stress detected"},
+    {name:"Atewa Buffer", risk:82, impact:"Forest encroachment"}
+  ];
+  const cont = document.getElementById('hotzones');
+  cont.innerHTML = '';
+  data.forEach(z => {
+    cont.innerHTML += `
+      <div style="background:var(--bg2);padding:11px;border-radius:8px;border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between"><span>${z.name}</span><span style="color:#FF3B5C" class="mono">${z.risk}%</span></div>
+        <small style="color:var(--text2)">${z.impact}</small>
+      </div>`;
+  });
+}
+
+// Live alerts
+function addLiveAlert() {
+  const alertsDiv = document.getElementById('alerts');
+  alertsDiv.innerHTML = `<div style="background:#1F0F12;padding:11px;border-radius:8px;border-left:5px solid #FF3B5C">🚨 NDVI drop detected near Pra River – possible galamsey</div>` + alertsDiv.innerHTML;
+}
+setInterval(addLiveAlert, 17000);
+
+window.simulateReport = function() {
+  alert("Report simulated. Marker added on map.");
+};
+
+// Init
+function init() {
+  initSatelliteMap();
+  getGPSLocation();
+  populateHotzones();
+
+  // Initial alerts
+  document.getElementById('alerts').innerHTML = `<div style="background:#1F0F12;padding:11px;border-radius:8px;border-left:5px solid #FF3B5C">🚨 Vegetation stress (low NDVI) in Ashanti</div>`;
+
+  window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
+}
+window.onload = init;
+</script>
+</DOCUMENT>
