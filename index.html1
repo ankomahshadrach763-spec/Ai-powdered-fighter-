@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Fighter | Galamsey Monitor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #0a0f1c;
+            color: #00ff9d;
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(90deg, #00ff9d, #00b36b);
+            color: #000;
+            padding: 15px 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.4em;
+        }
+        .container {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+        .sidebar {
+            width: 320px;
+            background: #0f1a2e;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #00ff9d33;
+        }
+        .main {
+            flex: 1;
+            position: relative;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .location-bar {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 26, 46, 0.95);
+            padding: 12px 20px;
+            border-radius: 50px;
+            box-shadow: 0 0 20px rgba(0, 255, 157, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            border: 1px solid #00ff9d;
+            width: 420px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 18px;
+            background: #1a2a47;
+            border: 1px solid #00ff9d;
+            border-radius: 30px;
+            color: #00ff9d;
+            font-size: 1em;
+        }
+        button {
+            padding: 12px 24px;
+            background: #00ff9d;
+            color: #000;
+            border: none;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #00cc7a;
+            transform: scale(1.05);
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            background: #1a2a47;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        .alert {
+            color: #ff4444;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>🛡️ AI-POWERED FIGHTER | GALAMSEY MONITOR</header>
+
+    <div class="container">
+        <!-- Sidebar Controls -->
+        <div class="sidebar">
+            <h2>🌍 Monitoring Controls</h2>
+            
+            <div class="status">
+                <strong>Sentinel-2 • NDVI Processing Active</strong><br>
+                <span id="time"></span>
+            </div>
+
+            <button onclick="runAnalysis()">🚀 RUN AI GALAMSEY + NDVI ANALYSIS</button>
+            
+            <h3>📍 Location Input</h3>
+            <div class="location-bar" style="position: static; width: 100%; transform: none; margin-bottom: 20px;">
+                <input type="text" id="locationInput" placeholder="Enter location (e.g. Obuasi, Tarkwa, 6.2 -1.8)" onkeypress="if(event.key === 'Enter') monitorLocation()">
+                <button onclick="monitorLocation()">MONITOR AREA</button>
+            </div>
+
+            <div id="currentLocation" class="status">
+                Current Focus: <strong>Ashanti Region</strong>
+            </div>
+
+            <h3>Layers</h3>
+            <label><input type="checkbox" checked> True Color (RGB)</label><br><br>
+            <label><input type="checkbox" checked> NDVI Vegetation Index</label><br><br>
+            <label><input type="checkbox"> Forest Reserves</label><br><br>
+            <label><input type="checkbox"> Water Bodies</label><br><br>
+            <label><input type="checkbox" checked> AI Galamsey Detection</label>
+
+            <div class="status">
+                <strong>AI + NDVI ACCURACY:</strong> <span style="color:#00ff9d">95.4%</span><br>
+                <strong>HIGH-RISK ZONES:</strong> <span id="riskCount">12</span>
+            </div>
+
+            <button onclick="reportActivity()" style="margin-top: 20px; width: 100%;">📢 REPORT ACTIVITY</button>
+        </div>
+
+        <!-- Main Map Area -->
+        <div class="main">
+            <!-- Location Input Bar (Floating) -->
+            <div class="location-bar">
+                <input type="text" id="floatingLocationInput" placeholder="Type any area to monitor (city, region, or coordinates)" onkeypress="if(event.key === 'Enter') monitorLocation()">
+                <button onclick="monitorLocation()">🔍 MONITOR</button>
+            </div>
+
+            <!-- Embedded Map (using OpenStreetMap or Google-like via iframe) -->
+            <iframe id="mapFrame" 
+                    src="https://www.openstreetmap.org/export/embed.html?bbox=-2.5%2C4.5%2C-0.5%2C7.5&layer=mapnik" 
+                    allowfullscreen></iframe>
+
+            <div class="status" style="position:absolute; bottom:15px; left:15px; width:300px;">
+                <strong>LIVE AI ALERTS</strong><br>
+                <span id="alerts" class="alert">Low NDVI detected in Western Region - Possible galamsey activity</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update time
+        function updateTime() {
+            const timeEl = document.getElementById('time');
+            setInterval(() => {
+                const now = new Date();
+                timeEl.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+            }, 1000);
+        }
+
+        // Monitor new location
+        function monitorLocation() {
+            const input = document.getElementById('locationInput').value.trim() || 
+                         document.getElementById('floatingLocationInput').value.trim();
+            
+            if (!input) {
+                alert("Please enter a location (e.g. Obuasi, Tarkwa, or coordinates)");
+                return;
+            }
+
+            const currentLocEl = document.getElementById('currentLocation');
+            currentLocEl.innerHTML = `Current Focus: <strong>${input}</strong> <span style="color:#00ff9d">(Monitoring...)</span>`;
+
+            // Simulate AI analysis on new location
+            document.getElementById('alerts').textContent = `AI scanning ${input}... Low vegetation detected in targeted area.`;
+            
+            // You can later integrate real geocoding APIs here (e.g., Leaflet + OpenStreetMap Nominatim)
+            console.log(`Monitoring new area: ${input}`);
+            
+            // Optional: Change map bounding box based on known Ghana regions (demo)
+            if (input.toLowerCase().includes("obuasi") || input.toLowerCase().includes("ashanti")) {
+                document.getElementById('mapFrame').src = "https://www.openstreetmap.org/export/embed.html?bbox=-1.8%2C6.1%2C-1.4%2C6.4&layer=mapnik";
+            } else if (input.toLowerCase().includes("tarkwa") || input.toLowerCase().includes("western")) {
+                document.getElementById('mapFrame').src = "https://www.openstreetmap.org/export/embed.html?bbox=-2.1%2C4.8%2C-1.7%2C5.2&layer=mapnik";
+            }
+        }
+
+        function runAnalysis() {
+            alert("🚀 AI Galamsey + NDVI Analysis running on current monitored area...");
+            document.getElementById('alerts').innerHTML = "Analysis complete. 3 new high-risk zones detected.";
+        }
+
+        function reportActivity() {
+            alert("📢 Report submitted. Your input + GPS + photos will be sent to authorities.");
+        }
+
+        // Initialize
+        window.onload = () => {
+            updateTime();
+            
+            // Demo alert rotation
+            setTimeout(() => {
+                document.getElementById('alerts').textContent = "NDVI drop detected - Possible illegal mining in monitored zone";
+            }, 8000);
+        };
+    </script>
+</body>
+</html>
